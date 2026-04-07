@@ -6,6 +6,7 @@ multi_policy/gpi_pd
 multi_policy/gpi_ls_jax
 multi_policy/envelope
 multi_policy/capql
+multi_policy/cola
 multi_policy/pgmorl
 multi_policy/morld
 multi_policy/pcn

@@ -10,6 +10,7 @@ from mo_gymnasium.envs.deep_sea_treasure.deep_sea_treasure import CONCAVE_MAP
 from morl_baselines.common.evaluation import eval_mo, eval_mo_reward_conditioned
 from morl_baselines.common.scalarization import tchebicheff
 from morl_baselines.multi_policy.capql.capql import CAPQL
+from morl_baselines.multi_policy.cola.cola import COLA
 from morl_baselines.multi_policy.envelope.envelope import Envelope
 from morl_baselines.multi_policy.gpi_pd.gpi_pd import GPIPD
 from morl_baselines.multi_policy.gpi_pd.gpi_pd_continuous_action import (
@@ -303,6 +304,36 @@ def test_capql():
         eval_env=eval_env,
         ref_point=np.array([0.0, 0.0]),
         eval_freq=100,
+    )
+
+    scalar_return, scalarized_disc_return, vec_ret, vec_disc_ret = eval_mo(agent, env=eval_env, w=np.array([0.5, 0.5]))
+    assert scalar_return != 0
+    assert scalarized_disc_return != 0
+    assert len(vec_ret) == 2
+    assert len(vec_disc_ret) == 2
+
+
+def test_cola():
+    env = mo_gym.make("mo-hopper-v5", cost_objective=False, max_episode_steps=100)
+    eval_env = mo_gym.make("mo-hopper-v5", cost_objective=False, max_episode_steps=100)
+
+    agent = COLA(
+        env,
+        log=False,
+        seed=0,
+        latent_dim=32,
+        learning_starts=100,
+        batch_size=64,
+    )
+
+    agent.train(
+        total_timesteps=500,
+        eval_env=eval_env,
+        ref_point=np.array([0.0, 0.0]),
+        eval_freq=200,
+        num_eval_weights_for_front=10,
+        num_eval_episodes_for_front=2,
+        num_eval_weights_for_eval=10,
     )
 
     scalar_return, scalarized_disc_return, vec_ret, vec_disc_ret = eval_mo(agent, env=eval_env, w=np.array([0.5, 0.5]))
