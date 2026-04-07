@@ -10,10 +10,10 @@ import numpy as np
 import torch as th
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from torch.distributions import Categorical
 
 from morl_baselines.common.accrued_reward_buffer import AccruedRewardReplayBuffer
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log
 from morl_baselines.common.evaluation import log_episode_info
 from morl_baselines.common.morl_algorithm import MOAgent, MOPolicy
 from morl_baselines.common.networks import layer_init, mlp
@@ -252,12 +252,13 @@ class EUPG(MOPolicy, MOAgent):
 
         if self.log:
             log_str = f"_{self.id}" if self.id is not None else ""
-            wandb.log(
+            tensorboard_log(
                 {
                     f"losses{log_str}/loss": loss,
                     f"metrics{log_str}/scalarized_episodic_return": scalarized_return,
                     "global_step": self.global_step,
                 },
+                step=self.global_step,
             )
 
     def _forward_cumulative_rewards(self, rewards):
@@ -379,11 +380,12 @@ class EUPG(MOPolicy, MOAgent):
 
             if self.log and self.global_step % 1000 == 0:
                 print("SPS:", int(self.global_step / (time.time() - start_time)))
-                wandb.log(
+                tensorboard_log(
                     {
                         "charts/SPS": int(self.global_step / (time.time() - start_time)),
                         "global_step": self.global_step,
-                    }
+                    },
+                    step=self.global_step,
                 )
 
     @override

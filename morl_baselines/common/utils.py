@@ -107,17 +107,12 @@ def nearest_neighbors(
     return nearest_neighbors_ids
 
 
-def reset_wandb_env():
-    """Reset the wandb environment variables.
+def reset_tensorboard_env():
+    """Reset the TensorBoard environment variables.
 
-    This is useful when running multiple sweeps in parallel, as wandb
+    This is useful when running multiple experiments in parallel, as TensorBoard
     will otherwise try to use the same directory for all the runs.
     """
-    exclude = {
-        "WANDB_PROJECT",
-        "WANDB_ENTITY",
-        "WANDB_API_KEY",
-    }
-    for k, v in os.environ.items():
-        if k.startswith("WANDB_") and k not in exclude:
-            del os.environ[k]
+    # No specific environment variables to reset for TensorBoard
+    # This function is kept for compatibility with wandb code
+    pass

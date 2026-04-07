@@ -35,7 +35,7 @@ def parse_args():
         "--ref-point", type=float, nargs="+", help="Reference point to use for the hypervolume calculation", required=True
     )
     parser.add_argument("--seed", type=int, help="Random seed to use", default=42)
-    parser.add_argument("--wandb-entity", type=str, help="Wandb entity to use", required=False)
+    parser.add_argument("--tensorboard-logdir", type=str, help="TensorBoard log directory", default="runs")
     parser.add_argument(
         "--auto-tag",
         type=lambda x: bool(strtobool(x)),
@@ -75,15 +75,15 @@ def parse_args():
 
 
 def autotag() -> str:
-    """This adds a tag to the wandb run marking the commit number, allows to versioning of experiments. From CleanRL's benchmark utility."""
-    wandb_tag = ""
+    """This adds a tag to the experiment marking the commit number, allows versioning of experiments. From CleanRL's benchmark utility."""
+    experiment_tag = ""
     print("autotag feature is enabled")
     try:
         git_tag = subprocess.check_output(["git", "describe", "--tags"]).decode("ascii").strip()
-        wandb_tag = f"{git_tag}"
+        experiment_tag = f"{git_tag}"
         print(f"identified git tag: {git_tag}")
     except subprocess.CalledProcessError:
-        return wandb_tag
+        return experiment_tag
 
     git_commit = subprocess.check_output(["git", "rev-parse", "--verify", "HEAD"]).decode("ascii").strip()
     try:
@@ -96,12 +96,12 @@ def autotag() -> str:
             if len(prs["items"]) > 0:
                 pr = prs["items"][0]
                 pr_number = pr["number"]
-                wandb_tag += f",pr-{pr_number}"  # noqa
+                experiment_tag += f",pr-{pr_number}"  # noqa
         print(f"identified github pull request: {pr_number}")
     except Exception as e:
         print(e)
 
-    return wandb_tag
+    return experiment_tag
 
 
 def main():
@@ -111,13 +111,9 @@ def main():
     seed_everything(args.seed)
 
     if args.auto_tag:
-        if "WANDB_TAGS" in os.environ:
-            raise ValueError(
-                "WANDB_TAGS is already set. Please unset it before running this script or run the script with --auto-tag False"
-            )
-        wandb_tag = autotag()
-        if len(wandb_tag) > 0:
-            os.environ["WANDB_TAGS"] = wandb_tag
+        experiment_tag = autotag()
+        if len(experiment_tag) > 0:
+            print(f"Experiment tag: {experiment_tag}")
 
     if args.algo == "pgmorl":
         # PGMORL creates its own environments because it requires wrappers
@@ -127,9 +123,9 @@ def main():
             env_id=args.env_id,
             origin=np.array(args.ref_point),
             gamma=args.gamma,
-            log=True,
+            tensorboard_log=True,
+            tensorboard_logdir=args.tensorboard_logdir,
             seed=args.seed,
-            wandb_entity=args.wandb_entity,
             **args.init_hyperparams,
         )
         print(algo.get_config())
@@ -195,9 +191,9 @@ def main():
         algo = ALGOS[args.algo](
             env=env,
             gamma=args.gamma,
-            log=True,
+            tensorboard_log=True,
+            tensorboard_logdir=args.tensorboard_logdir,
             seed=args.seed,
-            wandb_entity=args.wandb_entity,
             **args.init_hyperparams,
         )
         if args.env_id in ENVS_WITH_KNOWN_PARETO_FRONT:

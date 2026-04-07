@@ -9,11 +9,11 @@ from typing import Any, Callable, Iterable, Literal, Optional, TypeAlias
 import gymnasium as gym
 import numpy as np
 import torch
-import wandb
 from pymoo.config import Config
 from pymoo.indicators.hv import Hypervolume
 
 from morl_baselines.common.morl_algorithm import MOAgent
+from morl_baselines.common.tensorboard_logger import Table, finish, log as tensorboard_log
 from morl_baselines.common.pareto import (
     batched_pareto_dominates,
     batched_strict_pareto_dominates,
@@ -164,7 +164,7 @@ class OuterLoop(MOAgent):
         }
 
     def setup(self) -> float:
-        """Setup wandb."""
+        """Setup TensorBoard."""
         if self.track:
             super().setup_wandb(
                 project_name=self.wandb_project_name,
@@ -173,13 +173,8 @@ class OuterLoop(MOAgent):
                 mode=self.wandb_mode,
             )
 
-            wandb.define_metric("iteration")
-            wandb.define_metric("outer/hypervolume", step_metric="iteration")
-            wandb.define_metric("outer/dominated_hv", step_metric="iteration")
-            wandb.define_metric("outer/discarded_hv", step_metric="iteration")
-            wandb.define_metric("outer/coverage", step_metric="iteration")
-            wandb.define_metric("outer/error", step_metric="iteration")
-            self.run_id = wandb.run.id
+            # TensorBoard handles metrics automatically with steps
+            self.run_id = "tensorboard_run"
 
         return time.time()
 
@@ -209,43 +204,42 @@ class OuterLoop(MOAgent):
         self.close_wandb()
 
     def close_wandb(self):
-        """Close wandb."""
+        """Close TensorBoard."""
         if self.track:
-            pf_table = wandb.Table(data=self.pf, columns=[f"obj_{i}" for i in range(self.dim)])
-            wandb.log({"pareto_front": pf_table})
-            wandb.run.summary["PF_size"] = len(self.pf)
-            wandb.finish()
+            pf_table = Table(data=self.pf, columns=[f"obj_{i}" for i in range(self.dim)])
+            tensorboard_log({"pareto_front": pf_table}, step=999999999)
+            finish()
 
     def log_iteration(
         self, iteration: int, subproblem: Optional[Subproblem] = None, pareto_point: Optional[np.ndarray] = None
     ):
         """Log the iteration."""
         if self.track:
-            while True:
-                try:
-                    wandb.log(
-                        {
-                            "outer/hypervolume": self.hv,
-                            "outer/dominated_hv": self.dominated_hv,
-                            "outer/discarded_hv": self.discarded_hv,
-                            "outer/coverage": self.coverage,
-                            "outer/error": self.error,
-                            "iteration": iteration,
-                        }
-                    )
-                    break
-                except wandb.Error as e:
-                    print(f"wandb got error {e}")
-                    time.sleep(random.randint(10, 100))
+            tensorboard_log(
+                {
+                    "outer/hypervolume": self.hv,
+                    "outer/dominated_hv": self.dominated_hv,
+                    "outer/discarded_hv": self.discarded_hv,
+                    "outer/coverage": self.coverage,
+                    "outer/error": self.error,
+                    "iteration": iteration,
+                },
+                step=iteration,
+            )
 
             if subproblem is not None:
-                wandb.run.summary[f"referent_{iteration}"] = self.sign * subproblem.referent
-                wandb.run.summary[f"ideal_{iteration}"] = self.sign * subproblem.ideal
-                wandb.run.summary[f"pareto_point_{iteration}"] = self.sign * pareto_point
-
-            wandb.run.summary["hypervolume"] = self.hv
-            wandb.run.summary["PF_size"] = len(self.pf)
-            wandb.run.summary["replay_triggered"] = self.replay_triggered
+                # Log summary values as text for TensorBoard
+                tensorboard_log(
+                    {
+                        f"summary/referent_{iteration}": self.sign * subproblem.referent,
+                        f"summary/ideal_{iteration}": self.sign * subproblem.ideal,
+                        f"summary/pareto_point_{iteration}": self.sign * pareto_point,
+                        "summary/hypervolume": self.hv,
+                        "summary/PF_size": len(self.pf),
+                        "summary/replay_triggered": self.replay_triggered,
+                    },
+                    step=iteration,
+                )
 
     def compute_hypervolume(self, points: np.ndarray, ref: np.ndarray) -> float:
         """Compute the hypervolume of a set of points."""

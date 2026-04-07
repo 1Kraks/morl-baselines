@@ -5,9 +5,9 @@ from typing import Callable, List, Optional
 
 import gymnasium as gym
 import numpy as np
-import wandb
 
 from morl_baselines.common.evaluation import log_all_multi_policy_metrics
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 from morl_baselines.common.morl_algorithm import MOAgent
 from morl_baselines.common.pareto import get_non_dominated
 from morl_baselines.common.performance_indicators import hypervolume
@@ -258,7 +258,7 @@ class PQL(MOAgent):
                 state = next_state
 
                 if self.log and self.global_step % log_every == 0:
-                    wandb.log({"global_step": self.global_step})
+                    tensorboard_log({"global_step": self.global_step})
                     pf = self._eval_all_policies(eval_env)
                     log_all_multi_policy_metrics(
                         current_front=pf,

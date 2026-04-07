@@ -10,10 +10,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from torch.distributions.categorical import Categorical
 
 from morl_baselines.common.morl_algorithm import MOPolicy
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log
 
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
@@ -277,7 +277,7 @@ class NLMOPPO(MOPolicy):
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info and self.log:
-                        wandb.log(
+                        tensorboard_log(
                             {
                                 "charts/episodic_return": info["episode"]["r"],
                                 "charts/episodic_length": info["episode"]["l"],
@@ -473,7 +473,7 @@ class NLMOPPO(MOPolicy):
 
             sps = int(global_step / (time.time() - start_time))
             if self.log:
-                wandb.log(
+                tensorboard_log(
                     {
                         "charts/learning_rate": self.optimizer.param_groups[0]["lr"],
                         "losses/value_loss": float(v_loss.item()),

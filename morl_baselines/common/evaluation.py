@@ -6,8 +6,9 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import torch as th
-import wandb
 from pymoo.util.ref_dirs import get_reference_directions
+
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 
 from morl_baselines.common.pareto import filter_pareto_dominated
 from morl_baselines.common.performance_indicators import (
@@ -174,20 +175,20 @@ def log_all_multi_policy_metrics(
     eum = expected_utility(filtered_front, weights_set=equally_spaced_weights(reward_dim, n_sample_weights))
     card = cardinality(filtered_front)
 
-    wandb.log(
+    tensorboard_log(
         {
             "eval/hypervolume": hv,
             "eval/eum": eum,
             "eval/cardinality": card,
             "global_step": global_step,
         },
-        commit=False,
+        step=global_step,
     )
-    front = wandb.Table(
+    front = Table(
         columns=[f"objective_{i}" for i in range(1, reward_dim + 1)],
         data=[p.tolist() for p in filtered_front],
     )
-    wandb.log({"eval/front": front})
+    tensorboard_log({"eval/front": front}, step=global_step)
 
     # If PF is known, log the additional metrics
     if ref_front is not None:
@@ -197,7 +198,7 @@ def log_all_multi_policy_metrics(
             reference_set=ref_front,
             weights_set=get_reference_directions("energy", reward_dim, n_sample_weights).astype(np.float32),
         )
-        wandb.log({"eval/igd": generational_distance, "eval/mul": mul})
+        tensorboard_log({"eval/igd": generational_distance, "eval/mul": mul}, step=global_step)
 
 
 def seed_everything(seed: int):
@@ -257,7 +258,7 @@ def log_episode_info(
         idstr = "_" + str(id)
     else:
         idstr = ""
-    wandb.log(
+    tensorboard_log(
         {
             f"charts{idstr}/timesteps_per_episode": episode_ts,
             f"charts{idstr}/episode_time": episode_time,
@@ -265,13 +266,14 @@ def log_episode_info(
             f"metrics{idstr}/discounted_scalarized_episode_return": disc_scal_return,
             "global_step": global_timestep,
         },
-        commit=False,
+        step=global_timestep,
     )
 
     for i in range(episode_return.shape[0]):
-        wandb.log(
+        tensorboard_log(
             {
                 f"metrics{idstr}/episode_return_obj_{i}": episode_return[i],
                 f"metrics{idstr}/disc_episode_return_obj_{i}": disc_episode_return[i],
             },
+            step=global_timestep,
         )

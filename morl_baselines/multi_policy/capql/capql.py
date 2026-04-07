@@ -11,7 +11,6 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 from torch.distributions import Normal
 
 from morl_baselines.common.evaluation import (
@@ -19,6 +18,7 @@ from morl_baselines.common.evaluation import (
     log_episode_info,
     policy_evaluation_mo,
 )
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 from morl_baselines.common.morl_algorithm import MOAgent, MOPolicy
 from morl_baselines.common.networks import layer_init, mlp, polyak_update
 from morl_baselines.common.weights import equally_spaced_weights
@@ -353,7 +353,7 @@ class CAPQL(MOAgent, MOPolicy):
                 polyak_update(q_net.parameters(), target_q_net.parameters(), self.tau)
 
         if self.log and self.global_step % 100 == 0:
-            wandb.log(
+            tensorboard_log(
                 {
                     "losses/critic_loss": critic_loss.item(),
                     "losses/policy_loss": policy_loss.item(),

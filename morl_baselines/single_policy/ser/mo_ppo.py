@@ -9,7 +9,6 @@ import gymnasium as gym
 import mo_gymnasium as mo_gym
 import numpy as np
 import torch as th
-import wandb
 from mo_gymnasium.wrappers import MORecordEpisodeStatistics
 from torch import nn, optim
 from torch.distributions import Normal
@@ -17,6 +16,7 @@ from torch.distributions import Normal
 from morl_baselines.common.evaluation import log_episode_info
 from morl_baselines.common.morl_algorithm import MOPolicy
 from morl_baselines.common.networks import layer_init, mlp
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log
 
 
 class PPOReplayBuffer:
@@ -563,7 +563,7 @@ class MOPPO(MOPolicy):
 
         # record rewards for plotting purposes
         if self.log:
-            wandb.log(
+            tensorboard_log(
                 {
                     f"charts_{self.id}/learning_rate": self.optimizer.param_groups[0]["lr"],
                     f"losses_{self.id}/value_loss": v_loss.item(),
@@ -575,6 +575,7 @@ class MOPPO(MOPolicy):
                     f"losses_{self.id}/explained_variance": explained_var,
                     "global_step": self.global_step,
                 },
+                step=self.global_step,
             )
 
     def train(self, start_time, current_iteration: int, max_iterations: int):
@@ -608,6 +609,7 @@ class MOPPO(MOPolicy):
         print("SPS:", int(self.global_step / (time.time() - start_time)))
         if self.log:
             print(f"Worker {self.id} - Global step: {self.global_step}")
-            wandb.log(
+            tensorboard_log(
                 {"charts/SPS": int(self.global_step / (time.time() - start_time)), "global_step": self.global_step},
+                step=self.global_step,
             )

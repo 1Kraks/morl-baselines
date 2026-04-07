@@ -21,8 +21,9 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 from torch.distributions import Normal
+
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 
 from morl_baselines.common.evaluation import (
     log_all_multi_policy_metrics,
@@ -1150,7 +1151,7 @@ class COLA(MOAgent, MOPolicy):
 
             # Logging
             if self.log and self.learning_steps % 100 == 0:
-                wandb.log(
+                tensorboard_log(
                     {
                         "losses/q1_loss": q1_loss.item(),
                         "losses/q2_loss": q2_loss.item(),

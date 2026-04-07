@@ -14,10 +14,10 @@ import gymnasium as gym
 import mo_gymnasium as mo_gym
 import numpy as np
 import torch as th
-import wandb
 from scipy.optimize import least_squares
 
 from morl_baselines.common.evaluation import log_all_multi_policy_metrics
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 from morl_baselines.common.morl_algorithm import MOAgent
 from morl_baselines.common.pareto import ParetoArchive
 from morl_baselines.common.performance_indicators import hypervolume, sparsity
@@ -692,7 +692,7 @@ class PGMORL(MOAgent):
                 ]
 
                 if self.log:
-                    wandb.log(
+                    tensorboard_log(
                         {
                             "metrics/hypervolume_improvement": np.mean(hypervolumes),
                             "metrics/sparsity_improvement": np.mean(sparsity_values),
@@ -768,7 +768,7 @@ class PGMORL(MOAgent):
         for i in range(1, self.warmup_iterations + 1):
             print(f"Warmup iteration #{iteration}, global step: {self.global_step}")
             if self.log:
-                wandb.log({"charts/warmup_iterations": i, "global_step": self.global_step})
+                tensorboard_log({"charts/warmup_iterations": i, "global_step": self.global_step})
             self.__train_all_agents(iteration=iteration, max_iterations=max_iterations)
             iteration += 1
         self.__eval_all_agents(
@@ -786,7 +786,7 @@ class PGMORL(MOAgent):
             self.__task_weight_selection(ref_point=ref_point)
             print(f"Evolutionary generation #{evolutionary_generation}")
             if self.log:
-                wandb.log(
+                tensorboard_log(
                     {
                         "charts/evolutionary_generation": evolutionary_generation,
                         "global_step": self.global_step,
@@ -797,7 +797,7 @@ class PGMORL(MOAgent):
                 # Run training of every agent for evolutionary iterations.
                 if self.log:
                     print(f"Evolutionary iteration #{iteration - self.warmup_iterations}")
-                    wandb.log(
+                    tensorboard_log(
                         {
                             "charts/evolutionary_iterations": iteration - self.warmup_iterations,
                             "global_step": self.global_step,

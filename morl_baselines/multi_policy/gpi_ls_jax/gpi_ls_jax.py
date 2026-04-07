@@ -13,11 +13,11 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 import orbax
-import wandb
 from flax.training import orbax_utils
 from flax.training.train_state import TrainState
 
 from morl_baselines.common.buffer import ReplayBuffer, ReplayBufferSamplesNp
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 from morl_baselines.common.evaluation import (
     log_all_multi_policy_metrics,
     log_episode_info,
@@ -507,15 +507,15 @@ class GPILS(MOAgent, MOPolicy):
 
         if self.log and self.global_step % 100 == 0:
             if self.per:
-                wandb.log(
+                tensorboard_log(
                     {
                         "metrics/mean_priority": np.mean(priority),
                         "metrics/max_priority": np.max(priority),
                         "metrics/mean_td_error_w": np.mean(per),
                     },
-                    commit=False,
+                    
                 )
-            wandb.log(
+            tensorboard_log(
                 {
                     "losses/critic_loss": np.mean(critic_losses),
                     "metrics/epsilon": self.epsilon,
@@ -822,7 +822,7 @@ class GPILS(MOAgent, MOPolicy):
                 mean_gpi_returns_test_tasks = np.mean(
                     [np.dot(ew, q) for ew, q in zip(eval_weights, gpi_returns_test_tasks)], axis=0
                 )
-                wandb.log({"eval/Mean Utility - GPI": mean_gpi_returns_test_tasks, "iteration": iter})
+                tensorboard_log({"eval/Mean Utility - GPI": mean_gpi_returns_test_tasks, "iteration": iter})
 
             if checkpoints:
                 self.save(filename=f"GPI-LS {weight_selection_algo} iter={iter}")

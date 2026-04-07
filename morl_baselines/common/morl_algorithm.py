@@ -10,9 +10,16 @@ import gymnasium as gym
 import numpy as np
 import torch as th
 import torch.nn
-import wandb
 from gymnasium import spaces
 from mo_gymnasium.wrappers.vector import MOSyncVectorEnv
+
+from morl_baselines.common.tensorboard_logger import (
+    TensorBoardLogger,
+    init as tensorboard_init,
+    log as tensorboard_log,
+    finish as tensorboard_finish,
+    config as tensorboard_config,
+)
 
 from morl_baselines.common.evaluation import (
     eval_mo_reward_conditioned,
@@ -61,25 +68,27 @@ class MOPolicy(ABC):
         vec_return,
         discounted_vec_return,
     ):
-        """Writes the data to wandb summary."""
+        """Writes the data to TensorBoard summary."""
         if self.id is None:
             idstr = ""
         else:
             idstr = f"_{self.id}"
 
-        wandb.log(
+        tensorboard_log(
             {
                 f"eval{idstr}/scalarized_return": scalarized_return,
                 f"eval{idstr}/scalarized_discounted_return": scalarized_discounted_return,
                 "global_step": self.global_step,
-            }
+            },
+            step=self.global_step,
         )
         for i in range(vec_return.shape[0]):
-            wandb.log(
+            tensorboard_log(
                 {
                     f"eval{idstr}/vec_{i}": vec_return[i],
                     f"eval{idstr}/discounted_vec_{i}": discounted_vec_return[i],
                 },
+                step=self.global_step,
             )
 
     def policy_eval(
@@ -281,13 +290,13 @@ class MOAgent(ABC):
         """
 
     def register_additional_config(self, conf: Dict = {}) -> None:
-        """Registers additional config parameters to wandb. For example when calling train().
+        """Registers additional config parameters to TensorBoard. For example when calling train().
 
         Args:
             conf: dictionary of additional config parameters
         """
         for key, value in conf.items():
-            wandb.config[key] = value
+            tensorboard_config[key] = value
 
     def setup_wandb(
         self,
@@ -297,12 +306,12 @@ class MOAgent(ABC):
         group: Optional[str] = None,
         mode: Literal["online", "offline", "disabled", "shared"] | None = "online",
     ) -> None:
-        """Initializes the wandb writer.
+        """Initializes the TensorBoard writer.
 
         Args:
-            project_name: name of the wandb project. Usually MORL-Baselines.
-            experiment_name: name of the wandb experiment. Usually the algorithm name.
-            entity: wandb entity. Usually your username but useful for reporting other places such as openrlbenmark.
+            project_name: name of the TensorBoard project. Usually MORL-Baselines.
+            experiment_name: name of the TensorBoard experiment. Usually the algorithm name.
+            entity: TensorBoard entity. Usually your username but useful for reporting other places such as openrlbenmark.
 
         Returns:
             None
@@ -310,28 +319,24 @@ class MOAgent(ABC):
         self.experiment_name = experiment_name
         env_id = self.env.spec.id if not isinstance(self.env, MOSyncVectorEnv) else self.env.envs[0].spec.id
         self.full_experiment_name = f"{env_id}__{experiment_name}__{self.seed}__{int(time.time())}"
-        import wandb
 
         config = self.get_config()
         config["algo"] = self.experiment_name
+        config["seed"] = self.seed
         # looks for whether we're using a Gymnasium based env in env_variable
         monitor_gym = strtobool(os.environ.get("MONITOR_GYM", "True"))
 
-        wandb.init(
+        tensorboard_init(
             project=project_name,
+            name=self.full_experiment_name,
             entity=entity,
             config=config,
-            name=self.full_experiment_name,
             monitor_gym=monitor_gym,
             save_code=True,
             group=group,
             mode=mode,
         )
-        # The default "step" of wandb is not the actual time step (gloabl_step) of the MDP
-        wandb.define_metric("*", step_metric="global_step")
 
     def close_wandb(self) -> None:
-        """Closes the wandb writer and finishes the run."""
-        import wandb
-
-        wandb.finish()
+        """Closes the TensorBoard writer and finishes the run."""
+        tensorboard_finish()

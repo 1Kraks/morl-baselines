@@ -18,10 +18,10 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 from torch.distributions.categorical import Categorical
 
 from morl_baselines.common.buffer import ReplayBuffer
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log
 from morl_baselines.common.evaluation import log_episode_info
 from morl_baselines.common.morl_algorithm import MOPolicy
 from morl_baselines.common.networks import (
@@ -526,7 +526,7 @@ class MOSACDiscrete(MOPolicy):
             }
             if self.autotune:
                 to_log[f"losses{log_str}/alpha_loss"] = alpha_loss.item()
-            wandb.log(to_log)
+            tensorboard_log(to_log, step=self.global_step)
 
     def train(
         self,
@@ -593,11 +593,12 @@ class MOSACDiscrete(MOPolicy):
                     self.update()
                 if self.log and self.global_step % 100 == 0:
                     print("SPS:", int(self.global_step / (time.time() - start_time)))
-                    wandb.log(
+                    tensorboard_log(
                         {
                             "charts/SPS": int(self.global_step / (time.time() - start_time)),
                             "global_step": self.global_step,
-                        }
+                        },
+                        step=self.global_step,
                     )
 
             self.global_step += 1

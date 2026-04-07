@@ -6,9 +6,9 @@ from typing_extensions import override
 
 import gymnasium as gym
 import numpy as np
-import wandb
 
 from morl_baselines.common.evaluation import log_episode_info
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log
 from morl_baselines.common.model_based.tabular_model import TabularModel
 from morl_baselines.common.morl_algorithm import MOAgent, MOPolicy
 from morl_baselines.common.scalarization import weighted_sum
@@ -210,13 +210,14 @@ class MOQLearning(MOPolicy, MOAgent):
             )
 
         if self.log and self.global_step % 1000 == 0:
-            wandb.log(
+            tensorboard_log(
                 {
                     f"charts{self.idstr}/epsilon": self.epsilon,
                     f"losses{self.idstr}/scalarized_td_error": self.scalarization(td_error, self.weights),
                     f"losses{self.idstr}/mean_td_error": np.mean(td_error),
                     "global_step": self.global_step,
                 },
+                step=self.global_step,
             )
 
     @override
@@ -285,11 +286,12 @@ class MOQLearning(MOPolicy, MOAgent):
                 self.num_episodes += 1
 
                 if self.log and self.global_step % 1000 == 0:
-                    wandb.log(
+                    tensorboard_log(
                         {
                             f"charts{self.idstr}/SPS": int(self.global_step / (time.time() - start_time)),
                             "global_step": self.global_step,
                         },
+                        step=self.global_step,
                     )
                     if "episode" in info:
                         log_episode_info(

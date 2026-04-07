@@ -11,9 +11,9 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 
 from morl_baselines.common.buffer import ReplayBuffer
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 from morl_baselines.common.evaluation import (
     log_all_multi_policy_metrics,
     log_episode_info,
@@ -361,7 +361,7 @@ class GPIPDContinuousAction(MOAgent, MOPolicy):
                 obs = next_obs_pred[nonterm_mask]
 
         if self.log:
-            wandb.log(
+            tensorboard_log(
                 {
                     "dynamics/uncertainty_mean": uncertainties.mean(),
                     "dynamics/uncertainty_max": uncertainties.max(),
@@ -435,15 +435,15 @@ class GPIPDContinuousAction(MOAgent, MOPolicy):
 
         if self.log and self.global_step % 100 == 0:
             if self.per:
-                wandb.log(
+                tensorboard_log(
                     {
                         "metrics/mean_priority": np.mean(priority),
                         "metrics/max_priority": np.max(priority),
                         "metrics/min_priority": np.min(priority),
                     },
-                    commit=False,
+                    
                 )
-            wandb.log(
+            tensorboard_log(
                 {
                     "losses/critic_loss": critic_loss.item(),
                     "losses/policy_loss": policy_loss.item(),
@@ -553,7 +553,7 @@ class GPIPDContinuousAction(MOAgent, MOPolicy):
                         Y = np.hstack((m_rewards, m_next_obs - m_obs))
                         mean_holdout_loss = self.dynamics.fit(X, Y)
                         if self.log:
-                            wandb.log(
+                            tensorboard_log(
                                 {"dynamics/mean_holdout_loss": mean_holdout_loss, "global_step": self.global_step},
                             )
 
@@ -567,7 +567,7 @@ class GPIPDContinuousAction(MOAgent, MOPolicy):
 
                 if self.dyna and self.global_step >= self.dynamics_rollout_starts:
                     plot = visualize_eval(self, eval_env, self.dynamics, w=weight, compound=False, horizon=1000)
-                    wandb.log({"dynamics/predictions": wandb.Image(plot), "global_step": self.global_step})
+                    tensorboard_log({"dynamics/predictions": plot, "global_step": self.global_step}, step=self.global_step)
                     plot.close()
 
             if terminated or truncated:
@@ -694,7 +694,7 @@ class GPIPDContinuousAction(MOAgent, MOPolicy):
                 mean_gpi_returns_test_tasks = np.mean(
                     [np.dot(ew, q) for ew, q in zip(eval_weights, gpi_returns_test_tasks)], axis=0
                 )
-                wandb.log({"eval/Mean Utility - GPI": mean_gpi_returns_test_tasks, "iteration": iter})
+                tensorboard_log({"eval/Mean Utility - GPI": mean_gpi_returns_test_tasks, "iteration": iter})
 
             # Checkpoint
             if checkpoints:

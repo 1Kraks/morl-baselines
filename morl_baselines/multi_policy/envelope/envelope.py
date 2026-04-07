@@ -10,9 +10,9 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 
 from morl_baselines.common.buffer import ReplayBuffer
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 from morl_baselines.common.evaluation import (
     log_all_multi_policy_metrics,
     log_episode_info,
@@ -315,7 +315,7 @@ class Envelope(MOPolicy, MOAgent):
             self.q_optim.zero_grad()
             critic_loss.backward()
             if self.log and self.global_step % 100 == 0:
-                wandb.log(
+                tensorboard_log(
                     {
                         "losses/grad_norm": get_grad_norm(self.q_net.parameters()).item(),
                         "global_step": self.global_step,
@@ -355,7 +355,7 @@ class Envelope(MOPolicy, MOAgent):
             )
 
         if self.log and self.global_step % 100 == 0:
-            wandb.log(
+            tensorboard_log(
                 {
                     "losses/critic_loss": np.mean(critic_losses),
                     "metrics/epsilon": self.epsilon,
@@ -364,7 +364,7 @@ class Envelope(MOPolicy, MOAgent):
                 },
             )
             if self.per:
-                wandb.log({"metrics/mean_priority": np.mean(priority)})
+                tensorboard_log({"metrics/mean_priority": np.mean(priority)})
 
     @override
     def eval(self, obs: np.ndarray, w: np.ndarray) -> int:

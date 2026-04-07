@@ -11,9 +11,9 @@ import numpy as np
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
-import wandb
 
 from morl_baselines.common.evaluation import log_all_multi_policy_metrics
+from morl_baselines.common.tensorboard_logger import log as tensorboard_log, Table
 from morl_baselines.common.morl_algorithm import MOAgent, MOPolicy
 from morl_baselines.common.pareto import get_non_dominated_inds
 from morl_baselines.common.performance_indicators import hypervolume
@@ -472,7 +472,7 @@ class PCN(MOAgent, MOPolicy):
             if self.log:
                 hv = hypervolume(ref_point, leaves_r)
                 hv_est = hv
-                wandb.log(
+                tensorboard_log(
                     {
                         "train/hypervolume": hv_est,
                         "train/loss": np.mean(loss),
@@ -480,7 +480,7 @@ class PCN(MOAgent, MOPolicy):
                     },
                 )
                 if not self.continuous_action:
-                    wandb.log(
+                    tensorboard_log(
                         {
                             "train/entropy": np.mean(entropy),
                             "global_step": self.global_step,
@@ -498,7 +498,7 @@ class PCN(MOAgent, MOPolicy):
 
             total_episodes += num_step_episodes
             if self.log:
-                wandb.log(
+                tensorboard_log(
                     {
                         "train/episode": total_episodes,
                         "train/horizon_desired": desired_horizon,
@@ -508,7 +508,7 @@ class PCN(MOAgent, MOPolicy):
                 )
 
                 for i in range(self.reward_dim):
-                    wandb.log(
+                    tensorboard_log(
                         {
                             f"train/desired_return_{i}": desired_return[i],
                             f"train/mean_return_{i}": np.mean(np.array(returns)[:, i]),
